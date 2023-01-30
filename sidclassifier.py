@@ -90,20 +90,19 @@ class SIDCLASSIFIER:
             clf.fit(X_train, y_train)
             return clf
 
-    def assess_accuracy(self, clf, dataset: pd.DataFrame) -> pd.DataFrame:
+    def assess_accuracy(self, classifier, dataset: pd.DataFrame) -> pd.DataFrame:
         # build train and test sets
         X = dataset.drop(columns=['target'])
         y = dataset.target
         # split set: 75% as train set,25% as test set
-        X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                            test_size=0.25,
-                                                            random_state=12)
-        train_score = clf.score(X_train, y_train)
-        test_score = clf.score(X_test, y_test)
-        mean_cross_val_score = cross_val_score(clf, X_train, y_train, cv=5).mean()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=12)
+        train_score = classifier.score(X_train, y_train)
+        test_score = classifier.score(X_test, y_test)
+        mean_cross_val_score = cross_val_score(classifier, X_train, y_train, cv=5).mean()
         # return pandas DateFrame with model scores
         return pd.DataFrame({'classifier_type': [self.clsType],
                              'train_score': [train_score],
+                             'test_score': [test_score],
                              'cross_val_score': [mean_cross_val_score]})
 
     def store_to_file(self):
@@ -116,20 +115,21 @@ class SIDCLASSIFIER:
 def main():
     models = ['DT', 'kNN', 'LR', 'RFC', 'SVM']
     classifiers = dict.fromkeys(models)
-    scores = pd.DataFrame()
+    scores_frame = pd.DataFrame()
     print(classifiers)
     for model in classifiers:
         temp = SIDCLASSIFIER(model)
         data = temp.fetch_dataset()
         trained_model = temp.train(data)
         classifiers[model] = trained_model
+        trained_model_score = temp.assess_accuracy(trained_model, data)
+        scores_frame = pd.concat([scores_frame, trained_model_score])
 
+    scores_frame = scores_frame.set_index('classifier_type')
+    best_score = scores_frame.cross_val_score.max()
+    best_models = scores_frame.loc[scores_frame.cross_val_score == best_score]
+    print(best_models)
 
-
-    #scores = pd.concat([scores, tmp_score])
-    print(classifiers)
-
-    #iris.assess_accuracy()
 
     #iris.store_to_file()
 
