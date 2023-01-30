@@ -128,7 +128,11 @@ def main():
     scores_frame = scores_frame.set_index('classifier_type')
     best_score = scores_frame.cross_val_score.max()
     best_models = scores_frame.loc[scores_frame.cross_val_score == best_score]
+    print('The best model(s) based on cross-validation:')
+    print('=================================')
     print(best_models)
+
+    #print(scores_frame)
 
 
     #iris.store_to_file()
