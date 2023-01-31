@@ -68,40 +68,41 @@ class SIDCLASSIFIER:
         # build train and test sets
         X = dataset.drop(columns=['target','name'])
         y = dataset.name
+        X = X.values
+        y = y.values
         # split set: 75% as train set,25% as test set
-        X_train, X_test, y_train, y_test = train_test_split(X,y,
-                                                            random_state=12)
+        X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.30, random_state=12)
         # train SVM model without any tuning
         if self.clsType == 'SVM':
             clf = SVC()
-            clf.fit(X_train.values, y_train.values)
+            clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'DT':  # train DT model
             clf = DecisionTreeClassifier()
-            clf.fit(X_train.values, y_train.values)
+            clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'LR': # train LogisticRegression model
-            clf = LogisticRegression(solver = 'lbfgs',
-                                     max_iter=100)
-            clf.fit(X_train.values, y_train.values)
+            clf = LogisticRegression(solver = 'lbfgs', max_iter=1000)
+            clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'kNN':
             # 6 neighbors are optimal for this dataset, it was defined at previews step
             clf = KNeighborsClassifier(n_neighbors=6)
-            clf.fit(X_train.values, y_train.values)
+            clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'RFC':
-            # 6 neighbors are optimal for this dataset, it was defined at previews step
             clf = RandomForestClassifier()
-            clf.fit(X_train.values, y_train.values)
+            clf.fit(X_train, y_train)
             return clf
 
     def assess_accuracy(self, classifier, dataset: pd.DataFrame) -> pd.DataFrame:
         # build train and test sets
         X = dataset.drop(columns=['target', 'name'])
         y = dataset.name
+        X = X.values
+        y = y.values
         # split set: 75% as train set,25% as test set
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=12)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=12)
         train_score = classifier.score(X_train, y_train)
         test_score = classifier.score(X_test, y_test)
         mean_cross_val_score = cross_val_score(classifier, X, y, cv=5).mean()
@@ -155,7 +156,7 @@ def predict(feachers: [[]]):
     loaded_model = joblib.load(filename)
     return loaded_model.predict(feachers)
 
-def main1():
+def main():
     models = ['DT', 'kNN', 'LR', 'RFC', 'SVM']
     classifiers = dict.fromkeys(models)
     scores_frame = pd.DataFrame()
@@ -179,7 +180,7 @@ def main1():
     print(best_models)
     final_model = SIDCLASSIFIER('kNN')
     final_model.store_to_file(classifiers['kNN'])
-def main():
+def main1():
     print(predict([[5.2, 2.7, 3.9, 1.4]]))
 if __name__ == '__main__':
     main()
