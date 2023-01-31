@@ -32,12 +32,12 @@ async def predicted(request: Request, SL: float = Form(...), SW: float = Form(..
     prediction = clf.model.predict(data)
     prediction_str = str(prediction)
     return templates.TemplateResponse('index.html', context={
-        'request': request,
-        "prediction": prediction[0],
-        "SL": SL,
-        "SW": SW,
-        "PL": PL,
-        "PW": PW})
+            'request': request,
+            "prediction": prediction[0],
+            "SL": SL,
+            "SW": SW,
+            "PL": PL,
+            "PW": PW})
 
 if __name__ == '__main__':
     uvicorn.run(app, host='127.0.0.1', port=8000)
