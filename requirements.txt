@@ -3,3 +3,6 @@ sklearn~=0.0.post2
 scikit-learn~=1.2.1
 fastapi~=0.89.1
 pandas~=1.5.2
+matplotlib~=3.6.2
+joblib~=1.2.0
+seaborn~=0.12.2

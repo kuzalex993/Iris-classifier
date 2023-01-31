@@ -10,6 +10,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+import seaborn as sns
 import joblib
 import pandas as pd
 import os.path
@@ -20,24 +21,23 @@ class SIDCLASSIFIER:
                'LR': 'Logistic Regression',
                'RFC': 'Random Forest Classifier',
                'SVM': 'Support Vector Machine'}
-    clscs_names = ['Iris Setosa', 'Iris Versicolour', 'Iris Virginica']
+    class_names = ['Iris Setosa', 'Iris Versicolour', 'Iris Virginica']
 
     def __init__(self, clsType: string):
         # check the entered type of classifier
-        if clsType in self.D_types: # if it is correct -> show message about successful attempt
+        if clsType in self.D_types:  # if it is correct -> show message about successful attempt
             self.clsType = clsType
             print('Object for ' + self.D_types[clsType] + ' model has been created')
-        else: # if not -> show message about the selection.
+        else:  # if not -> show message about the selection.
             print('Please, specify type of classifier to be trained from the list')
             print('Type' + ' ----- ' + 'Description')
             # print('------------------------')
             for key in self.D_types:
-                print(key + ' ----- '+ self.D_types[key])
+                print(key + ' ----- ' + self.D_types[key])
         self.class_names = []
 
     def fetch_dataset(self) -> pd.DataFrame:
         # if dataset was already loaded once from sklearn lib to local directory(/data), we load it from local directory
-
         if os.path.isfile('data/iris_data.csv'):
             print('File exist')
             iris_frame = pd.read_csv('data/iris_data.csv')
@@ -55,65 +55,66 @@ class SIDCLASSIFIER:
 
             # Add Target column to DataFrame:
             iris_frame['target'] = iris_data.target
+            iris_frame['name'] = iris_frame.target.apply(lambda x: iris_data.target_names[x])
             print("Data set was converted to Pandas DataFrame")
 
             # Save DataFrame on local machine
-            iris_frame.to_csv('data/iris_data.csv')
+            iris_frame.to_csv('data/iris_data.csv', index=False)
             print("Data set was saved to file '/data/iris_data.csv'")
         #print(iris_frame)
         return iris_frame
 
-    def train(self, dataset: pd.DataFrame):# -> pd.DataFrame:
+    def train(self, dataset: pd.DataFrame):  # -> pd.DataFrame:
         # build train and test sets
-        X = dataset.drop(columns=['target'])
-        y = dataset.target
+        X = dataset.drop(columns=['target','name'])
+        y = dataset.name
         # split set: 75% as train set,25% as test set
         X_train, X_test, y_train, y_test = train_test_split(X,y,
-                                                            test_size=0.30,
-                                                            random_state=42)
+                                                            random_state=12)
         # train SVM model without any tuning
         if self.clsType == 'SVM':
             clf = SVC()
-            clf.fit(X_train, y_train)
+            clf.fit(X_train.values, y_train.values)
             return clf
-        elif self.clsType == 'DT': # train DT model
+        elif self.clsType == 'DT':  # train DT model
             clf = DecisionTreeClassifier()
-            clf.fit(X_train, y_train)
+            clf.fit(X_train.values, y_train.values)
             return clf
         elif self.clsType == 'LR': # train LogisticRegression model
-            clf = LogisticRegression(solver = 'lbfgs', max_iter=100)
-            clf.fit(X_train, y_train)
+            clf = LogisticRegression(solver = 'lbfgs',
+                                     max_iter=100)
+            clf.fit(X_train.values, y_train.values)
             return clf
         elif self.clsType == 'kNN':
             # 6 neighbors are optimal for this dataset, it was defined at previews step
             clf = KNeighborsClassifier(n_neighbors=6)
-            clf.fit(X_train, y_train)
+            clf.fit(X_train.values, y_train.values)
             return clf
         elif self.clsType == 'RFC':
             # 6 neighbors are optimal for this dataset, it was defined at previews step
             clf = RandomForestClassifier()
-            clf.fit(X_train, y_train)
+            clf.fit(X_train.values, y_train.values)
             return clf
 
     def assess_accuracy(self, classifier, dataset: pd.DataFrame) -> pd.DataFrame:
         # build train and test sets
-        X = dataset.drop(columns=['target'])
-        y = dataset.target
+        X = dataset.drop(columns=['target', 'name'])
+        y = dataset.name
         # split set: 75% as train set,25% as test set
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=12)
         train_score = classifier.score(X_train, y_train)
         test_score = classifier.score(X_test, y_test)
-        mean_cross_val_score = cross_val_score(classifier, X_train, y_train, cv=5).mean()
+        mean_cross_val_score = cross_val_score(classifier, X, y, cv=5).mean()
 
         # Plot non-normalized confusion matrix for SVM
         titles_options = [
-            ("Confusion matrix for "+self.clsType+", without normalization", None), ]
+            ("Confusion matrix for " + self.clsType + ", without normalization", None), ]
         for title, normalize in titles_options:
             disp = ConfusionMatrixDisplay.from_estimator(
                 classifier,
                 X_test,
                 y_test,
-                display_labels = self.class_names,
+                display_labels = classifier.classes_,
                 cmap=plt.cm.Blues,
                 normalize=normalize,
             )
@@ -135,12 +136,31 @@ class SIDCLASSIFIER:
         # save model
         joblib.dump(trained_model, filename)
 
+    def visualize(self):
+        # let's build heatmap for feachers
+        dataset = self.fetch_dataset()
+        X = dataset.drop(columns=['target', 'name'])
+        plt.figure(figsize=(12, 8))
+        sns.heatmap(X.corr(), annot=True, cmap=plt.cm.Spectral)
+        image_name = 'Iris_X_heatmap'
+        plt.savefig('data vizualizaton/'+image_name+'.png')
 
-def main():
+        # pairplot:
+        sns.pairplot(dataset, hue='name')
+        image_name = 'Iris_pairplot'
+        plt.savefig('data vizualizaton/'+image_name+'.png')
+def predict(feachers: [[]]):
+    # load model
+    filename = "models/final_model.joblib"
+    loaded_model = joblib.load(filename)
+    return loaded_model.predict(feachers)
+
+def main1():
     models = ['DT', 'kNN', 'LR', 'RFC', 'SVM']
     classifiers = dict.fromkeys(models)
     scores_frame = pd.DataFrame()
-    #print(classifiers)
+    initial_model = SIDCLASSIFIER('RFC')
+    initial_model.visualize()
     for model in classifiers:
         temp = SIDCLASSIFIER(model)
         data = temp.fetch_dataset()
@@ -157,14 +177,9 @@ def main():
     print('The best model(s) based on cross-validation:')
     print('=================================')
     print(best_models)
-    final_model = SIDCLASSIFIER('RFC')
-    final_model.store_to_file(classifiers['RFC'])
-
-
-
-
-    #iris.store_to_file()
-
-
+    final_model = SIDCLASSIFIER('kNN')
+    final_model.store_to_file(classifiers['kNN'])
+def main():
+    print(predict([[5.2, 2.7, 3.9, 1.4]]))
 if __name__ == '__main__':
     main()
