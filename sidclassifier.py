@@ -8,6 +8,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import joblib
 import pandas as pd
 import os.path
 
@@ -17,6 +20,7 @@ class SIDCLASSIFIER:
                'LR': 'Logistic Regression',
                'RFC': 'Random Forest Classifier',
                'SVM': 'Support Vector Machine'}
+    clscs_names = ['Iris Setosa', 'Iris Versicolour', 'Iris Virginica']
 
     def __init__(self, clsType: string):
         # check the entered type of classifier
@@ -29,13 +33,14 @@ class SIDCLASSIFIER:
             # print('------------------------')
             for key in self.D_types:
                 print(key + ' ----- '+ self.D_types[key])
+        self.class_names = []
 
     def fetch_dataset(self) -> pd.DataFrame:
         # if dataset was already loaded once from sklearn lib to local directory(/data), we load it from local directory
 
-        if os.path.isfile('/data/iris_data.csv'):
+        if os.path.isfile('data/iris_data.csv'):
             print('File exist')
-            iris_frame = pd.read_csv('/data/iris_data.csv')
+            iris_frame = pd.read_csv('data/iris_data.csv')
         else:
             print('File not exist and datset will be loaded from sklearn library')
             # load Iris data from sklearn
@@ -64,8 +69,8 @@ class SIDCLASSIFIER:
         y = dataset.target
         # split set: 75% as train set,25% as test set
         X_train, X_test, y_train, y_test = train_test_split(X,y,
-                                                            test_size=0.25,
-                                                            random_state=12)
+                                                            test_size=0.30,
+                                                            random_state=42)
         # train SVM model without any tuning
         if self.clsType == 'SVM':
             clf = SVC()
@@ -76,7 +81,7 @@ class SIDCLASSIFIER:
             clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'LR': # train LogisticRegression model
-            clf = LogisticRegression(max_iter=200)
+            clf = LogisticRegression(solver = 'lbfgs', max_iter=100)
             clf.fit(X_train, y_train)
             return clf
         elif self.clsType == 'kNN':
@@ -95,28 +100,47 @@ class SIDCLASSIFIER:
         X = dataset.drop(columns=['target'])
         y = dataset.target
         # split set: 75% as train set,25% as test set
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=12)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
         train_score = classifier.score(X_train, y_train)
         test_score = classifier.score(X_test, y_test)
         mean_cross_val_score = cross_val_score(classifier, X_train, y_train, cv=5).mean()
+
+        # Plot non-normalized confusion matrix for SVM
+        titles_options = [
+            ("Confusion matrix for "+self.clsType+", without normalization", None), ]
+        for title, normalize in titles_options:
+            disp = ConfusionMatrixDisplay.from_estimator(
+                classifier,
+                X_test,
+                y_test,
+                display_labels = self.class_names,
+                cmap=plt.cm.Blues,
+                normalize=normalize,
+            )
+            disp.ax_.set_title(title)
+
+            print(title)
+            print(disp.confusion_matrix)
+            image_name = 'CM for ' + self.clsType
+            plt.savefig('confusion matrix/'+image_name+'.png')
+
         # return pandas DateFrame with model scores
         return pd.DataFrame({'classifier_type': [self.clsType],
                              'train_score': [train_score],
                              'test_score': [test_score],
                              'cross_val_score': [mean_cross_val_score]})
 
-    def store_to_file(self):
-        """
-        store trained classifier to file
-        """
-        pass
+    def store_to_file(self, trained_model):
+        filename = "models/final_model.joblib"
+        # save model
+        joblib.dump(trained_model, filename)
 
 
 def main():
     models = ['DT', 'kNN', 'LR', 'RFC', 'SVM']
     classifiers = dict.fromkeys(models)
     scores_frame = pd.DataFrame()
-    print(classifiers)
+    #print(classifiers)
     for model in classifiers:
         temp = SIDCLASSIFIER(model)
         data = temp.fetch_dataset()
@@ -128,11 +152,15 @@ def main():
     scores_frame = scores_frame.set_index('classifier_type')
     best_score = scores_frame.cross_val_score.max()
     best_models = scores_frame.loc[scores_frame.cross_val_score == best_score]
+
+    print(scores_frame)
     print('The best model(s) based on cross-validation:')
     print('=================================')
     print(best_models)
+    final_model = SIDCLASSIFIER('RFC')
+    final_model.store_to_file(classifiers['RFC'])
 
-    #print(scores_frame)
+
 
 
     #iris.store_to_file()
