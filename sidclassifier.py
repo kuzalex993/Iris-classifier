@@ -70,7 +70,7 @@ class SIDCLASSIFIER:
         y = dataset.name
         X = X.values
         y = y.values
-        # split set: 75% as train set,25% as test set
+        # split set: 70% as train set,30% as test set
         X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.30, random_state=12)
         # train SVM model without any tuning
         if self.clsType == 'SVM':
